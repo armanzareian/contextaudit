@@ -32,7 +32,8 @@ git clone https://github.com/armanzareian/contextaudit.git
 cd contextaudit
 PYTHONPATH=src python3 -m contextaudit scan \
   --context examples/support-pack/context.jsonl \
-  --policy examples/support-pack/policy.json
+  --policy examples/support-pack/policy.json \
+  --fail-on critical
 ```
 
 Install the CLI:
