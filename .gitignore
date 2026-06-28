@@ -1,0 +1,27 @@
+.DS_Store
+.venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+dist/
+build/
+
+# Private project-control and automation material must never enter the public repo.
+roadmap.md
+ROADMAP.md
+active_project.json
+project_registry.json
+.project-control/
+INTERNAL*.md
+NOTES*.md
+PLAN*.md
+TODO.private.md
+.automation/
+automation.toml
+automation*.json
+automation*.md
+memory.md

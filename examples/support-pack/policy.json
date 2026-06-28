@@ -1,0 +1,4 @@
+{
+  "fail_on": "high",
+  "max_chunk_chars": 180
+}
