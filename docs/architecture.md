@@ -15,6 +15,20 @@ packs. It is designed around small, testable modules and deterministic output.
 The scanner keeps detector output as `Issue` objects until rendering. This makes the CLI and
 Python API share the same behavior and keeps report formatting separate from detection logic.
 
+## Policy Model
+
+Policies are loaded once and normalized before scanning. The policy model controls:
+
+- the failure threshold and maximum chunk size,
+- disabled detector IDs,
+- detector-level severity overrides,
+- source allowlists for instruction-like detector checks,
+- detector-specific regex pattern packs.
+
+Policy validation rejects unknown detectors, invalid severities, and invalid regex patterns before
+the scanner runs. CLI flags can override the failure threshold and chunk-size limit while preserving
+the rest of the file policy.
+
 ## Detectors
 
 The initial detector set is intentionally narrow:
@@ -28,6 +42,9 @@ The initial detector set is intentionally narrow:
 
 Detectors return short evidence snippets and never execute context text. The score subtracts a
 fixed penalty by severity and is intended for triage, not as a calibrated safety probability.
+Each issue receives a deterministic fingerprint based on the detector, chunk ID, source, and
+evidence. Severity overrides intentionally do not affect fingerprints, which makes review and
+suppression workflows stable when a team changes how strongly a detector should fail builds.
 
 ## Error Handling
 

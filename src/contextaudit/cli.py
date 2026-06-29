@@ -54,6 +54,10 @@ def _run_scan(args: argparse.Namespace) -> int:
     policy = Policy(
         fail_on=normalize_severity(args.fail_on or file_policy.fail_on),
         max_chunk_chars=args.max_chunk_chars or file_policy.max_chunk_chars,
+        disabled_detectors=file_policy.disabled_detectors,
+        severity_overrides=file_policy.severity_overrides,
+        allowlisted_sources=file_policy.allowlisted_sources,
+        detector_patterns=file_policy.detector_patterns,
     )
     report = scan_context(load_context_jsonl(args.context), policy)
     if args.format == "json":

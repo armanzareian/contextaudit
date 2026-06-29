@@ -77,12 +77,29 @@ Policies are JSON:
 ```json
 {
   "fail_on": "high",
-  "max_chunk_chars": 180
+  "max_chunk_chars": 180,
+  "disabled_detectors": [],
+  "severity_overrides": {
+    "sensitive_data": "critical"
+  },
+  "allowlisted_sources": ["kb://trusted-examples/*"],
+  "detector_patterns": {
+    "sensitive_data": ["\\btenant secret\\b\\s+[\\w-]+"]
+  }
 }
 ```
 
 `fail_on` accepts `low`, `medium`, `high`, or `critical`. The CLI exits with code `1` when any
 issue meets or exceeds that threshold. Malformed inputs exit with code `2`.
+
+Detector controls are optional:
+
+- `disabled_detectors` disables detector IDs such as `duplicate_text`.
+- `severity_overrides` changes the severity assigned to a detector without changing its fingerprint.
+- `allowlisted_sources` accepts exact or shell-style wildcard source patterns, and exempts matching
+  chunks from instruction-like detectors. Sensitive-data and hygiene checks still run.
+- `detector_patterns` adds case-insensitive Python regex patterns to pattern-based detectors:
+  `instruction_override`, `untrusted_instruction`, and `sensitive_data`.
 
 CLI flags override policy-file values:
 
@@ -107,8 +124,10 @@ Max severity: high
 ```
 
 JSON output includes `score`, `issue_count`, `max_severity`, `summary`, `policy`, `exit_code`,
-and a machine-readable `issues` array. The score is a simple deterministic penalty score for
-triage, not a model-safety guarantee.
+and a machine-readable `issues` array. Each issue includes a deterministic `fingerprint` derived
+from its detector, chunk ID, source, and evidence so suppressions can remain stable across severity
+changes. The score is a simple deterministic penalty score for triage, not a model-safety
+guarantee.
 
 ## Python API
 

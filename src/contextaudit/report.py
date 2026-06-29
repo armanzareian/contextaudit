@@ -28,6 +28,7 @@ def render_text(report: ScanReport) -> str:
         for issue in report.issues:
             lines.append(
                 f"- [{issue.severity}] {issue.detector} {issue.chunk_id} "
-                f"({issue.source}): {issue.message} Evidence: {issue.evidence}"
+                f"({issue.source}) fingerprint {issue.fingerprint}: "
+                f"{issue.message} Evidence: {issue.evidence}"
             )
     return "\n".join(lines) + "\n"

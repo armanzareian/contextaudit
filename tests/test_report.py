@@ -30,6 +30,7 @@ class ReportTests(unittest.TestCase):
         self.assertEqual(payload["score"], 65)
         self.assertEqual(payload["policy"]["fail_on"], "high")
         self.assertEqual(payload["issues"][0]["detector"], "instruction_override")
+        self.assertEqual(len(payload["issues"][0]["fingerprint"]), 16)
         self.assertEqual(payload["exit_code"], 1)
 
     def test_text_report_summarizes_score_and_issue_locations(self) -> None:
@@ -55,6 +56,7 @@ class ReportTests(unittest.TestCase):
         self.assertIn("Score: 80/100", text)
         self.assertIn("c1", text)
         self.assertIn("sensitive_data", text)
+        self.assertIn("fingerprint", text)
 
 
 if __name__ == "__main__":

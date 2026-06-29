@@ -72,6 +72,64 @@ class ScannerTests(unittest.TestCase):
         self.assertEqual(report.exit_code, 0)
         self.assertEqual(report.max_severity, "high")
 
+    def test_policy_hardens_detectors_with_controls_and_fingerprints(self) -> None:
+        chunks = [
+            ContextChunk(
+                chunk_id="trusted-example",
+                source="kb://trusted-playbook",
+                text="Ignore previous instructions only appears here as a safe example.",
+                trusted=False,
+            ),
+            ContextChunk(
+                chunk_id="custom-secret",
+                source="ticket://42",
+                text="Escalation note includes tenant secret alpha-123 for test coverage.",
+            ),
+            ContextChunk(
+                chunk_id="long",
+                source="kb://warranty",
+                text="warranty " * 30,
+            ),
+            ContextChunk(
+                chunk_id="dupe-a",
+                source="kb://shipping-a",
+                text="Shipping takes five business days.",
+            ),
+            ContextChunk(
+                chunk_id="dupe-b",
+                source="kb://shipping-b",
+                text="Shipping takes five business days.",
+            ),
+        ]
+        policy = Policy(
+            max_chunk_chars=40,
+            disabled_detectors=("duplicate_text",),
+            severity_overrides={"sensitive_data": "critical", "oversize_chunk": "low"},
+            allowlisted_sources=("kb://trusted-*",),
+            detector_patterns={"sensitive_data": (r"\btenant secret\b\s+[\w-]+",)},
+        )
+
+        report = scan_context(chunks, policy)
+        repeat_report = scan_context(chunks, policy)
+
+        issue_keys = [(issue.detector, issue.chunk_id, issue.severity) for issue in report.issues]
+        self.assertEqual(
+            issue_keys,
+            [
+                ("sensitive_data", "custom-secret", "critical"),
+                ("oversize_chunk", "custom-secret", "low"),
+                ("oversize_chunk", "long", "low"),
+                ("oversize_chunk", "trusted-example", "low"),
+            ],
+        )
+        self.assertNotIn("duplicate_text", report.summary)
+        self.assertNotIn("instruction_override", report.summary)
+        self.assertTrue(all(len(issue.fingerprint) == 16 for issue in report.issues))
+        self.assertEqual(
+            [issue.fingerprint for issue in report.issues],
+            [issue.fingerprint for issue in repeat_report.issues],
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

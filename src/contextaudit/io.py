@@ -83,12 +83,30 @@ def policy_from_mapping(record: dict[str, Any] | None) -> Policy:
         return Policy()
     fail_on = record.get("fail_on", "high")
     max_chunk_chars = record.get("max_chunk_chars", 4000)
+    disabled_detectors = _string_list_field(record, "disabled_detectors")
+    severity_overrides_record = record.get("severity_overrides", {})
+    allowlisted_sources = _string_list_field(record, "allowlisted_sources")
+    detector_patterns = _detector_patterns_field(record)
     if not isinstance(fail_on, str):
         raise InputError("policy.fail_on must be a string")
     if not isinstance(max_chunk_chars, int):
         raise InputError("policy.max_chunk_chars must be an integer")
+    if not isinstance(severity_overrides_record, dict):
+        raise InputError("policy.severity_overrides must be an object")
+    severity_overrides: dict[str, str] = {}
+    for detector, severity in severity_overrides_record.items():
+        if not isinstance(detector, str) or not isinstance(severity, str):
+            raise InputError("policy.severity_overrides must map detector names to severities")
+        severity_overrides[detector] = severity
     try:
-        return Policy(fail_on=fail_on, max_chunk_chars=max_chunk_chars)
+        return Policy(
+            fail_on=fail_on,
+            max_chunk_chars=max_chunk_chars,
+            disabled_detectors=tuple(disabled_detectors),
+            severity_overrides=severity_overrides,
+            allowlisted_sources=tuple(allowlisted_sources),
+            detector_patterns=detector_patterns,
+        )
     except ValueError as exc:
         raise InputError(f"invalid policy: {exc}") from exc
 
@@ -97,3 +115,28 @@ def load_policy(path: Path | None) -> Policy:
     if path is None:
         return Policy()
     return policy_from_mapping(_object_from(_read_json(path), str(path)))
+
+
+def _string_list_field(record: dict[str, Any], field: str) -> list[str]:
+    value = record.get(field, [])
+    if not isinstance(value, list):
+        raise InputError(f"policy.{field} must be an array")
+    if not all(isinstance(item, str) and item for item in value):
+        raise InputError(f"policy.{field} must contain non-empty strings")
+    return value
+
+
+def _detector_patterns_field(record: dict[str, Any]) -> dict[str, tuple[str, ...]]:
+    value = record.get("detector_patterns", {})
+    if not isinstance(value, dict):
+        raise InputError("policy.detector_patterns must be an object")
+    patterns: dict[str, tuple[str, ...]] = {}
+    for detector, detector_patterns in value.items():
+        if not isinstance(detector, str):
+            raise InputError("policy.detector_patterns keys must be detector names")
+        if not isinstance(detector_patterns, list):
+            raise InputError("policy.detector_patterns values must be arrays")
+        if not all(isinstance(pattern, str) and pattern for pattern in detector_patterns):
+            raise InputError("policy.detector_patterns values must contain non-empty strings")
+        patterns[detector] = tuple(detector_patterns)
+    return patterns

@@ -1,4 +1,16 @@
 {
   "fail_on": "high",
-  "max_chunk_chars": 180
+  "max_chunk_chars": 180,
+  "disabled_detectors": [],
+  "severity_overrides": {
+    "oversize_chunk": "medium"
+  },
+  "allowlisted_sources": [
+    "kb://trusted-examples/*"
+  ],
+  "detector_patterns": {
+    "sensitive_data": [
+      "\\btenant secret\\b\\s+[\\w-]+"
+    ]
+  }
 }
