@@ -37,5 +37,8 @@ jobs:
       - name: Run demo scan
         run: make demo
 
+      - name: Run answer audit demo
+        run: make answer-demo
+
       - name: Run labeled evaluation
         run: make eval

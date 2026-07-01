@@ -131,6 +131,54 @@ class CliTests(unittest.TestCase):
         self.assertEqual(code, 0)
         self.assertIn("Precision: 1.00", output.getvalue())
 
+    def test_audit_answer_command_reports_machine_readable_findings(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            context_path = Path(tmpdir) / "context.jsonl"
+            context_path.write_text(
+                json.dumps(
+                    {
+                        "chunk_id": "refunds",
+                        "source": "kb://refund-policy",
+                        "text": "Refunds are available within 30 days for unopened items.",
+                    }
+                )
+                + "\n"
+            )
+            answer_path = Path(tmpdir) / "answer.json"
+            answer_path.write_text(
+                json.dumps(
+                    {
+                        "answer": (
+                            "Refunds are available within 30 days. "
+                            "Premium plans include weekend phone support."
+                        ),
+                        "citations": ["refunds", "missing"],
+                    }
+                )
+            )
+            output = StringIO()
+
+            with patch("sys.stdout", output):
+                code = main(
+                    [
+                        "audit-answer",
+                        "--context",
+                        str(context_path),
+                        "--answer",
+                        str(answer_path),
+                        "--format",
+                        "json",
+                        "--fail-on",
+                        "medium",
+                    ]
+                )
+
+        payload = json.loads(output.getvalue())
+        self.assertEqual(code, 1)
+        self.assertEqual(payload["issue_count"], 2)
+        self.assertEqual(payload["summary"]["missing_citation"], 1)
+        self.assertEqual(payload["summary"]["weak_sentence_support"], 1)
+
 
 if __name__ == "__main__":
     unittest.main()

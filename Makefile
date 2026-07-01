@@ -1,4 +1,4 @@
-.PHONY: test quality demo eval
+.PHONY: test quality demo answer-demo eval
 
 PYTHON ?= python3
 
@@ -13,6 +13,13 @@ demo:
 		--context examples/support-pack/context.jsonl \
 		--policy examples/support-pack/policy.json \
 		--fail-on critical
+
+answer-demo:
+	PYTHONPATH=src $(PYTHON) -m contextaudit audit-answer \
+		--context examples/support-pack/context.jsonl \
+		--answer examples/support-pack/answer-supported.json \
+		--policy examples/support-pack/policy.json \
+		--fail-on high
 
 eval:
 	PYTHONPATH=src $(PYTHON) -m contextaudit eval \

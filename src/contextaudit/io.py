@@ -5,6 +5,7 @@ from collections.abc import Iterable
 from pathlib import Path
 from typing import Any
 
+from contextaudit.answer_audit import AnswerCandidate
 from contextaudit.models import ContextChunk, Policy
 
 MAX_INPUT_BYTES = 10 * 1024 * 1024
@@ -115,6 +116,22 @@ def load_policy(path: Path | None) -> Policy:
     if path is None:
         return Policy()
     return policy_from_mapping(_object_from(_read_json(path), str(path)))
+
+
+def load_answer(path: Path) -> AnswerCandidate:
+    record = _object_from(_read_json(path), str(path))
+    citations = record.get("citations", [])
+    if not isinstance(citations, list):
+        raise InputError(f"{path}: citations must be an array")
+    if not all(isinstance(citation, str) and citation for citation in citations):
+        raise InputError(f"{path}: citations must contain non-empty strings")
+    try:
+        return AnswerCandidate(
+            answer=_string_field(record, "answer", str(path)),
+            citations=tuple(citations),
+        )
+    except ValueError as exc:
+        raise InputError(f"{path}: {exc}") from exc
 
 
 def _string_list_field(record: dict[str, Any], field: str) -> list[str]:

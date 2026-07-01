@@ -9,13 +9,15 @@ Offline audits for RAG and LLM context packs before they reach a model.
 ContextAudit reads assembled context chunks, applies deterministic checks, and reports issues
 that can make retrieval output unsafe, noisy, or hard to review. The initial release focuses on
 instruction-override text, sensitive-looking values, untrusted source instructions, duplicate text,
-and oversized chunks. It runs locally with no runtime dependencies and makes no network requests.
+oversized chunks, and lightweight answer citation checks. It runs locally with no runtime
+dependencies and makes no network requests.
 
 ## Why ContextAudit
 
 - **Pre-model context gate:** inspect the exact context pack that would be sent to an LLM.
 - **Deterministic checks:** produce reproducible reports suitable for local development and CI.
 - **Policy thresholds:** fail on a selected severity while still reporting lower-severity issues.
+- **Answer citation audit:** check supplied answers for missing citations and weak lexical support.
 - **Labeled evaluation:** measure detector behavior against JSON fixture suites.
 - **Small integration surface:** use the CLI, or call the typed Python API directly.
 
@@ -51,6 +53,15 @@ Run the included labeled evaluation:
 contextaudit eval --suite examples/support-pack/suite.json
 ```
 
+Audit a generated answer against the same context pack:
+
+```bash
+contextaudit audit-answer \
+  --context examples/support-pack/context.jsonl \
+  --answer examples/support-pack/answer-supported.json \
+  --policy examples/support-pack/policy.json
+```
+
 ## Context Input
 
 Context packs are JSON Lines. Each row is one chunk:
@@ -69,6 +80,37 @@ Fields:
 
 Input files are capped at 10 MiB. Context text is never executed, and reports include only short
 evidence excerpts around matched patterns.
+
+## Answer Input
+
+Answer audits accept a JSON object with the final answer text and the chunk IDs it cites:
+
+```json
+{
+  "answer": "Refunds are available for unopened items within 30 days.",
+  "citations": ["kb-refunds"]
+}
+```
+
+Run `audit-answer` when you want to check answer grounding after retrieval and generation:
+
+```bash
+contextaudit audit-answer \
+  --context examples/support-pack/context.jsonl \
+  --answer examples/support-pack/answer-problem.json \
+  --policy examples/support-pack/policy.json \
+  --fail-on medium
+```
+
+The answer audit reports:
+
+- `missing_citation`: a cited chunk ID is absent from the supplied context pack.
+- `weak_sentence_support`: an answer sentence has weak token overlap with cited chunks.
+- `uncited_risky_context`: answer text overlaps with high-risk context that was not cited.
+
+The support check is a lexical heuristic. It can miss paraphrases, numbers expressed in different
+formats, and claims whose support spans multiple documents. Treat findings as review prompts, not
+semantic proof that an answer is correct or incorrect.
 
 ## Policy
 
@@ -149,12 +191,33 @@ report = scan_context(
 assert report.exit_code == 1
 ```
 
+```python
+from contextaudit import AnswerCandidate, ContextChunk, audit_answer
+
+answer_report = audit_answer(
+    [
+        ContextChunk(
+            chunk_id="kb-refunds",
+            source="kb://refund-policy",
+            text="Refunds are available for unopened items within 30 days.",
+        )
+    ],
+    AnswerCandidate(
+        answer="Refunds are available for unopened items within 30 days.",
+        citations=("kb-refunds",),
+    ),
+)
+
+assert len(answer_report.issues) == 0
+```
+
 ## Development
 
 ```bash
 make test
 make quality
 make demo
+make answer-demo
 make eval
 ```
 
@@ -167,4 +230,5 @@ mypy configuration is included for maintainers who want stricter local checks.
 - Sensitive-data detection catches common key/value patterns and can miss unusual formats.
 - Duplicate detection compares normalized exact text, not paraphrases.
 - Oversize detection is character-based and does not count tokenizer-specific tokens.
+- Answer support checks use token overlap and do not understand paraphrase or entailment.
 - The first release supports JSONL context packs only.

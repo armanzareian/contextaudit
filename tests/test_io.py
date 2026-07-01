@@ -5,7 +5,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from contextaudit.io import InputError, load_context_jsonl, load_policy
+from contextaudit.io import InputError, load_answer, load_context_jsonl, load_policy
 
 
 class IoTests(unittest.TestCase):
@@ -93,6 +93,24 @@ class IoTests(unittest.TestCase):
                 load_policy(bad_override)
             with self.assertRaisesRegex(InputError, "invalid regex"):
                 load_policy(bad_pattern)
+
+    def test_load_answer_reads_answer_and_citation_ids(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            path = Path(tmpdir) / "answer.json"
+            path.write_text(json.dumps({"answer": "Refund details.", "citations": ["refunds"]}))
+
+            answer = load_answer(path)
+
+        self.assertEqual(answer.answer, "Refund details.")
+        self.assertEqual(answer.citations, ("refunds",))
+
+    def test_load_answer_rejects_malformed_citations(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            path = Path(tmpdir) / "answer.json"
+            path.write_text(json.dumps({"answer": "Refund details.", "citations": [""]}))
+
+            with self.assertRaisesRegex(InputError, "citations"):
+                load_answer(path)
 
 
 if __name__ == "__main__":

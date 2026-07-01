@@ -15,6 +15,9 @@ DETECTORS = (
     "sensitive_data",
     "oversize_chunk",
     "duplicate_text",
+    "missing_citation",
+    "weak_sentence_support",
+    "uncited_risky_context",
 )
 PATTERN_DETECTORS = ("instruction_override", "untrusted_instruction", "sensitive_data")
 
