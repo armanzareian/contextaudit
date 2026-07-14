@@ -7,6 +7,8 @@
 - [ ] `make test`
 - [ ] `make quality`
 - [ ] `make demo`
+- [ ] `make answer-demo`
+- [ ] `make adapter-demo`
 - [ ] `make eval`
 
 ## Notes

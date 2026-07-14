@@ -18,6 +18,8 @@ dependencies and makes no network requests.
 - **Deterministic checks:** produce reproducible reports suitable for local development and CI.
 - **Policy thresholds:** fail on a selected severity while still reporting lower-severity issues.
 - **Answer citation audit:** check supplied answers for missing citations and weak lexical support.
+- **Corpus adapters:** load JSONL context packs, Markdown directories, LangChain document JSONL,
+  and LlamaIndex node JSON.
 - **Labeled evaluation:** measure detector behavior against JSON fixture suites.
 - **Small integration surface:** use the CLI, or call the typed Python API directly.
 
@@ -64,7 +66,7 @@ contextaudit audit-answer \
 
 ## Context Input
 
-Context packs are JSON Lines. Each row is one chunk:
+Context packs are JSON Lines by default. Each row is one chunk:
 
 ```json
 {"chunk_id":"kb-refunds","source":"kb://refund-policy","text":"Refunds are available within 30 days.","trusted":true}
@@ -80,6 +82,33 @@ Fields:
 
 Input files are capped at 10 MiB. Context text is never executed, and reports include only short
 evidence excerpts around matched patterns.
+
+Use `--context-format` when your retrieval export is not native ContextAudit JSONL:
+
+```bash
+contextaudit scan \
+  --context examples/adapters/markdown \
+  --context-format markdown \
+  --fail-on critical
+```
+
+Supported context formats:
+
+- `jsonl`: ContextAudit JSON Lines with `chunk_id`, `source`, `text`, optional `trusted`, and
+  optional `metadata`.
+- `markdown`: a directory of `.md` files, optionally beginning with simple `key: value` front
+  matter between `---` fences. `chunk_id`, `source`, and `trusted` are promoted to chunk fields;
+  remaining keys become metadata. Files without front matter use the relative path as source and
+  the path without `.md` as chunk ID.
+- `langchain-jsonl`: JSON Lines with LangChain-style `page_content` and optional `metadata`.
+  `metadata.chunk_id`, `metadata.source`, `metadata.file_path`, and `metadata.trusted` are
+  promoted when present.
+- `llamaindex-json`: a JSON array of nodes, an object with `nodes`, or a simple
+  `docstore.data` object. Node IDs come from `id_`, `node_id`, or `id`; source comes from common
+  metadata fields such as `source`, `file_path`, `document_id`, or `ref_doc_id`.
+
+Adapter errors report the file path, JSON line, or node index where validation failed without
+printing the full document body.
 
 ## Answer Input
 
@@ -97,6 +126,7 @@ Run `audit-answer` when you want to check answer grounding after retrieval and g
 ```bash
 contextaudit audit-answer \
   --context examples/support-pack/context.jsonl \
+  --context-format jsonl \
   --answer examples/support-pack/answer-problem.json \
   --policy examples/support-pack/policy.json \
   --fail-on medium
@@ -192,6 +222,15 @@ assert report.exit_code == 1
 ```
 
 ```python
+from pathlib import Path
+
+from contextaudit import load_markdown_directory, scan_context
+
+chunks = load_markdown_directory(Path("examples/adapters/markdown"))
+report = scan_context(chunks)
+```
+
+```python
 from contextaudit import AnswerCandidate, ContextChunk, audit_answer
 
 answer_report = audit_answer(
@@ -218,6 +257,7 @@ make test
 make quality
 make demo
 make answer-demo
+make adapter-demo
 make eval
 ```
 
@@ -231,4 +271,4 @@ mypy configuration is included for maintainers who want stricter local checks.
 - Duplicate detection compares normalized exact text, not paraphrases.
 - Oversize detection is character-based and does not count tokenizer-specific tokens.
 - Answer support checks use token overlap and do not understand paraphrase or entailment.
-- The first release supports JSONL context packs only.
+- Front matter parsing intentionally supports simple scalar `key: value` fields, not full YAML.

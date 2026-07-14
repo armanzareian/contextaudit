@@ -8,7 +8,7 @@ from pathlib import Path
 from contextaudit import __version__
 from contextaudit.answer_audit import audit_answer
 from contextaudit.evaluation import evaluate_suite, render_evaluation_json, render_evaluation_text
-from contextaudit.io import InputError, load_answer, load_context_jsonl, load_policy
+from contextaudit.io import CONTEXT_FORMATS, InputError, load_answer, load_context, load_policy
 from contextaudit.models import Policy, normalize_severity
 from contextaudit.report import render_json, render_text
 from contextaudit.scanner import scan_context
@@ -40,7 +40,13 @@ def _build_parser() -> argparse.ArgumentParser:
     subparsers = parser.add_subparsers(dest="command")
 
     scan = subparsers.add_parser("scan", help="scan a context JSONL file")
-    scan.add_argument("--context", type=Path, required=True, help="JSONL context pack to scan")
+    scan.add_argument("--context", type=Path, required=True, help="context input to scan")
+    scan.add_argument(
+        "--context-format",
+        choices=CONTEXT_FORMATS,
+        default="jsonl",
+        help="context input format",
+    )
     scan.add_argument("--policy", type=Path, help="optional JSON policy file")
     scan.add_argument("--format", choices=("text", "json"), default="text")
     scan.add_argument("--fail-on", choices=("low", "medium", "high", "critical"))
@@ -50,7 +56,13 @@ def _build_parser() -> argparse.ArgumentParser:
         "audit-answer",
         help="audit an answer JSON file against cited context chunks",
     )
-    answer.add_argument("--context", type=Path, required=True, help="JSONL context pack")
+    answer.add_argument("--context", type=Path, required=True, help="context input")
+    answer.add_argument(
+        "--context-format",
+        choices=CONTEXT_FORMATS,
+        default="jsonl",
+        help="context input format",
+    )
     answer.add_argument("--answer", type=Path, required=True, help="JSON answer candidate")
     answer.add_argument("--policy", type=Path, help="optional JSON policy file")
     answer.add_argument("--format", choices=("text", "json"), default="text")
@@ -65,7 +77,7 @@ def _build_parser() -> argparse.ArgumentParser:
 
 def _run_scan(args: argparse.Namespace) -> int:
     policy = _policy_from_args(args)
-    report = scan_context(load_context_jsonl(args.context), policy)
+    report = scan_context(load_context(args.context, args.context_format), policy)
     if args.format == "json":
         print(render_json(report), end="")
     else:
@@ -75,7 +87,11 @@ def _run_scan(args: argparse.Namespace) -> int:
 
 def _run_audit_answer(args: argparse.Namespace) -> int:
     policy = _policy_from_args(args)
-    report = audit_answer(load_context_jsonl(args.context), load_answer(args.answer), policy)
+    report = audit_answer(
+        load_context(args.context, args.context_format),
+        load_answer(args.answer),
+        policy,
+    )
     if args.format == "json":
         print(render_json(report), end="")
     else:

@@ -5,7 +5,7 @@ packs. It is designed around small, testable modules and deterministic output.
 
 ## Data Flow
 
-1. `contextaudit.io` loads a JSONL context pack and optional JSON policy.
+1. `contextaudit.io` loads a context pack, optional adapter format, and optional JSON policy.
 2. `contextaudit.models` represents chunks, policies, issues, and scan reports.
 3. `contextaudit.scanner` runs deterministic detectors and computes the triage score.
 4. `contextaudit.answer_audit` checks answer citations and lexical support against context chunks.
@@ -15,6 +15,19 @@ packs. It is designed around small, testable modules and deterministic output.
 
 The scanner keeps detector output as `Issue` objects until rendering. This makes the CLI and
 Python API share the same behavior and keeps report formatting separate from detection logic.
+
+## Corpus Adapters
+
+All context inputs normalize to `ContextChunk` values before scanning. Native JSONL is the most
+direct path, while adapters cover common retrieval exports:
+
+- Markdown directories with optional simple front matter.
+- LangChain-style document JSONL using `page_content` and `metadata`.
+- LlamaIndex-style node JSON using node IDs, text, and common metadata source fields.
+
+Adapters preserve user metadata where practical, promote stable chunk IDs and sources, and report
+validation failures with the input path, JSON line, or node index. Error messages avoid echoing
+full document bodies so malformed sensitive inputs do not get copied into terminal logs.
 
 ## Policy Model
 
@@ -57,16 +70,17 @@ that deserve human review.
 ## Error Handling
 
 Malformed user input raises `InputError`, which the CLI maps to exit code `2`. Policy threshold
-failures return exit code `1`. Clean scans or evaluation runs return `0`.
+failures return exit code `1`. Clean scans, adapter demos, or evaluation runs return `0`.
 
-Input files are size-capped, JSONL parsing reports line numbers, and adapter errors avoid
-printing full chunk text.
+Input files are size-capped, JSONL parsing reports line numbers, Markdown parsing reports paths,
+and LlamaIndex parsing reports node indexes.
 
 ## Extension Points
 
 The current extension surface is the Python API:
 
 - create `ContextChunk` values,
+- load common context exports through `load_context` or adapter-specific loader functions,
 - call `scan_context(chunks, policy)`,
 - call `audit_answer(chunks, answer_candidate, policy)`,
 - inspect `ScanReport.issues`, `summary`, and `exit_code`.

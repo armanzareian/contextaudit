@@ -1,4 +1,4 @@
-.PHONY: test quality demo answer-demo eval
+.PHONY: test quality demo answer-demo adapter-demo eval
 
 PYTHON ?= python3
 
@@ -20,6 +20,20 @@ answer-demo:
 		--answer examples/support-pack/answer-supported.json \
 		--policy examples/support-pack/policy.json \
 		--fail-on high
+
+adapter-demo:
+	PYTHONPATH=src $(PYTHON) -m contextaudit scan \
+		--context examples/adapters/markdown \
+		--context-format markdown \
+		--fail-on critical
+	PYTHONPATH=src $(PYTHON) -m contextaudit scan \
+		--context examples/adapters/langchain/documents.jsonl \
+		--context-format langchain-jsonl \
+		--fail-on critical
+	PYTHONPATH=src $(PYTHON) -m contextaudit scan \
+		--context examples/adapters/llamaindex/nodes.json \
+		--context-format llamaindex-json \
+		--fail-on critical
 
 eval:
 	PYTHONPATH=src $(PYTHON) -m contextaudit eval \
