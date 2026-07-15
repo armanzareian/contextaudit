@@ -9,8 +9,8 @@ from contextaudit import __version__
 from contextaudit.answer_audit import audit_answer
 from contextaudit.evaluation import evaluate_suite, render_evaluation_json, render_evaluation_text
 from contextaudit.io import CONTEXT_FORMATS, InputError, load_answer, load_context, load_policy
-from contextaudit.models import Policy, normalize_severity
-from contextaudit.report import render_json, render_text
+from contextaudit.models import Policy, ScanReport, normalize_severity
+from contextaudit.report import render_json, render_sarif, render_text
 from contextaudit.scanner import scan_context
 
 
@@ -48,7 +48,7 @@ def _build_parser() -> argparse.ArgumentParser:
         help="context input format",
     )
     scan.add_argument("--policy", type=Path, help="optional JSON policy file")
-    scan.add_argument("--format", choices=("text", "json"), default="text")
+    scan.add_argument("--format", choices=("text", "json", "sarif"), default="text")
     scan.add_argument("--fail-on", choices=("low", "medium", "high", "critical"))
     scan.add_argument("--max-chunk-chars", type=int)
 
@@ -65,7 +65,7 @@ def _build_parser() -> argparse.ArgumentParser:
     )
     answer.add_argument("--answer", type=Path, required=True, help="JSON answer candidate")
     answer.add_argument("--policy", type=Path, help="optional JSON policy file")
-    answer.add_argument("--format", choices=("text", "json"), default="text")
+    answer.add_argument("--format", choices=("text", "json", "sarif"), default="text")
     answer.add_argument("--fail-on", choices=("low", "medium", "high", "critical"))
     answer.add_argument("--max-chunk-chars", type=int)
 
@@ -78,10 +78,7 @@ def _build_parser() -> argparse.ArgumentParser:
 def _run_scan(args: argparse.Namespace) -> int:
     policy = _policy_from_args(args)
     report = scan_context(load_context(args.context, args.context_format), policy)
-    if args.format == "json":
-        print(render_json(report), end="")
-    else:
-        print(render_text(report), end="")
+    print(_render_report(report, args.format), end="")
     return report.exit_code
 
 
@@ -92,10 +89,7 @@ def _run_audit_answer(args: argparse.Namespace) -> int:
         load_answer(args.answer),
         policy,
     )
-    if args.format == "json":
-        print(render_json(report), end="")
-    else:
-        print(render_text(report), end="")
+    print(_render_report(report, args.format), end="")
     return report.exit_code
 
 
@@ -118,3 +112,11 @@ def _run_eval(args: argparse.Namespace) -> int:
     else:
         print(render_evaluation_text(result), end="")
     return 0
+
+
+def _render_report(report: ScanReport, output_format: str) -> str:
+    if output_format == "json":
+        return render_json(report)
+    if output_format == "sarif":
+        return render_sarif(report)
+    return render_text(report)

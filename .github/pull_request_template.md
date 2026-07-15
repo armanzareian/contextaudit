@@ -9,6 +9,7 @@
 - [ ] `make demo`
 - [ ] `make answer-demo`
 - [ ] `make adapter-demo`
+- [ ] `make sarif-demo`
 - [ ] `make eval`
 
 ## Notes

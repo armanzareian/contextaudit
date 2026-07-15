@@ -9,12 +9,21 @@ packs. It is designed around small, testable modules and deterministic output.
 2. `contextaudit.models` represents chunks, policies, issues, and scan reports.
 3. `contextaudit.scanner` runs deterministic detectors and computes the triage score.
 4. `contextaudit.answer_audit` checks answer citations and lexical support against context chunks.
-5. `contextaudit.report` renders text or JSON output.
+5. `contextaudit.report` renders text, JSON, or SARIF output.
 6. `contextaudit.evaluation` runs labeled suites and reports precision, recall, and F1.
 7. `contextaudit.cli` wires the library into `scan`, `audit-answer`, and `eval` commands.
 
 The scanner keeps detector output as `Issue` objects until rendering. This makes the CLI and
 Python API share the same behavior and keeps report formatting separate from detection logic.
+
+## Report Formats
+
+All report formats are derived from the same `ScanReport`. Text output is optimized for terminal
+review, JSON output preserves the full machine-readable issue contract, and SARIF output is shaped
+for CI systems that ingest static-analysis results. SARIF rules correspond to detector IDs. SARIF
+results preserve the issue source as the artifact URI, the chunk ID as a logical location, the
+evidence snippet as the region snippet, and the stable issue fingerprint under
+`partialFingerprints.contextaudit`.
 
 ## Corpus Adapters
 

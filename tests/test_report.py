@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import unittest
 
+from contextaudit import report as report_module
 from contextaudit.models import Issue, Policy, ScanReport
 from contextaudit.report import render_json, render_text
 
@@ -57,6 +58,44 @@ class ReportTests(unittest.TestCase):
         self.assertIn("c1", text)
         self.assertIn("sensitive_data", text)
         self.assertIn("fingerprint", text)
+
+    def test_sarif_report_maps_findings_to_source_locations(self) -> None:
+        renderer = getattr(report_module, "render_sarif", None)
+        self.assertIsNotNone(renderer, "render_sarif should be available")
+        report = ScanReport(
+            score=70,
+            issues=[
+                Issue(
+                    chunk_id="docs/refunds",
+                    source="docs/refunds.md",
+                    detector="instruction_override",
+                    severity="high",
+                    message="Instruction-like text found.",
+                    evidence="Ignore previous instructions",
+                )
+            ],
+            summary={"instruction_override": 1},
+            policy=Policy(fail_on="high"),
+        )
+
+        payload = json.loads(renderer(report))
+
+        self.assertEqual(payload["version"], "2.1.0")
+        self.assertEqual(payload["runs"][0]["tool"]["driver"]["name"], "ContextAudit")
+        rules = payload["runs"][0]["tool"]["driver"]["rules"]
+        self.assertEqual(rules[0]["id"], "instruction_override")
+        result = payload["runs"][0]["results"][0]
+        self.assertEqual(result["ruleId"], "instruction_override")
+        self.assertEqual(result["level"], "error")
+        self.assertEqual(
+            result["locations"][0]["physicalLocation"]["artifactLocation"]["uri"],
+            "docs/refunds.md",
+        )
+        self.assertEqual(result["properties"]["chunk_id"], "docs/refunds")
+        self.assertEqual(
+            result["partialFingerprints"]["contextaudit"],
+            report.issues[0].fingerprint,
+        )
 
 
 if __name__ == "__main__":

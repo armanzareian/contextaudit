@@ -20,6 +20,7 @@ dependencies and makes no network requests.
 - **Answer citation audit:** check supplied answers for missing citations and weak lexical support.
 - **Corpus adapters:** load JSONL context packs, Markdown directories, LangChain document JSONL,
   and LlamaIndex node JSON.
+- **SARIF output:** emit findings for CI systems and code-scanning tools that understand SARIF.
 - **Labeled evaluation:** measure detector behavior against JSON fixture suites.
 - **Small integration surface:** use the CLI, or call the typed Python API directly.
 
@@ -201,6 +202,23 @@ from its detector, chunk ID, source, and evidence so suppressions can remain sta
 changes. The score is a simple deterministic penalty score for triage, not a model-safety
 guarantee.
 
+SARIF output is available for `scan` and `audit-answer`:
+
+```bash
+contextaudit scan \
+  --context examples/support-pack/context.jsonl \
+  --policy examples/support-pack/policy.json \
+  --format sarif \
+  --fail-on critical
+```
+
+SARIF results use the detector ID as `ruleId`, map `low` to `note`, `medium` to `warning`, and
+`high` or `critical` to `error`. The issue source becomes the SARIF artifact URI, the chunk ID is
+reported as a logical location, and the deterministic fingerprint is included in
+`partialFingerprints.contextaudit`. A read-only CI job can redirect the output to a `.sarif` file
+or publish it as a build artifact; uploading it to a hosted code-scanning product may require
+additional platform-specific permissions.
+
 ## Python API
 
 ```python
@@ -258,6 +276,7 @@ make quality
 make demo
 make answer-demo
 make adapter-demo
+make sarif-demo
 make eval
 ```
 
