@@ -19,11 +19,13 @@ Python API share the same behavior and keeps report formatting separate from det
 ## Report Formats
 
 All report formats are derived from the same `ScanReport`. Text output is optimized for terminal
-review, JSON output preserves the full machine-readable issue contract, and SARIF output is shaped
-for CI systems that ingest static-analysis results. SARIF rules correspond to detector IDs. SARIF
-results preserve the issue source as the artifact URI, the chunk ID as a logical location, the
-evidence snippet as the region snippet, and the stable issue fingerprint under
-`partialFingerprints.contextaudit`.
+review, JSON output preserves the full machine-readable issue contract, Markdown summary output is
+shaped for pull-request comments and build-step summaries, and SARIF output is shaped for CI
+systems that ingest static-analysis results. Markdown summaries include the score, issue count,
+policy threshold, detector counts, and a compact finding table with escaped evidence snippets.
+SARIF rules correspond to detector IDs. SARIF results preserve the issue source as the artifact
+URI, the chunk ID as a logical location, the evidence snippet as the region snippet, and the stable
+issue fingerprint under `partialFingerprints.contextaudit`.
 
 ## Corpus Adapters
 

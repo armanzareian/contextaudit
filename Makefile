@@ -1,4 +1,4 @@
-.PHONY: test quality demo answer-demo adapter-demo sarif-demo eval
+.PHONY: test quality demo answer-demo adapter-demo sarif-demo summary-demo eval
 
 PYTHON ?= python3
 
@@ -40,6 +40,13 @@ sarif-demo:
 		--context examples/support-pack/context.jsonl \
 		--policy examples/support-pack/policy.json \
 		--format sarif \
+		--fail-on critical
+
+summary-demo:
+	@PYTHONPATH=src $(PYTHON) -m contextaudit scan \
+		--context examples/support-pack/context.jsonl \
+		--policy examples/support-pack/policy.json \
+		--format markdown \
 		--fail-on critical
 
 eval:

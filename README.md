@@ -21,6 +21,7 @@ dependencies and makes no network requests.
 - **Corpus adapters:** load JSONL context packs, Markdown directories, LangChain document JSONL,
   and LlamaIndex node JSON.
 - **SARIF output:** emit findings for CI systems and code-scanning tools that understand SARIF.
+- **Markdown summaries:** produce pull-request and build-step summaries for review workflows.
 - **Labeled evaluation:** measure detector behavior against JSON fixture suites.
 - **Small integration surface:** use the CLI, or call the typed Python API directly.
 
@@ -219,6 +220,36 @@ reported as a logical location, and the deterministic fingerprint is included in
 or publish it as a build artifact; uploading it to a hosted code-scanning product may require
 additional platform-specific permissions.
 
+Markdown summary output is available for pull-request comments and build-step summaries:
+
+```bash
+contextaudit scan \
+  --context examples/support-pack/context.jsonl \
+  --policy examples/support-pack/policy.json \
+  --format markdown \
+  --fail-on critical
+```
+
+The summary includes score, issue count, maximum severity, policy threshold, exit code, detector
+counts, and a compact findings table with chunk IDs, sources, fingerprints, and evidence snippets.
+In GitHub Actions, redirect it to the step summary from a read-only job:
+
+```yaml
+permissions:
+  contents: read
+
+steps:
+  - uses: actions/checkout@v4
+    with:
+      persist-credentials: false
+  - run: |
+      PYTHONPATH=src python3 -m contextaudit scan \
+        --context examples/support-pack/context.jsonl \
+        --policy examples/support-pack/policy.json \
+        --format markdown \
+        --fail-on critical >> "$GITHUB_STEP_SUMMARY"
+```
+
 ## Python API
 
 ```python
@@ -277,6 +308,7 @@ make demo
 make answer-demo
 make adapter-demo
 make sarif-demo
+make summary-demo
 make eval
 ```
 

@@ -30,6 +30,55 @@ def render_json(report: ScanReport) -> str:
     return json.dumps(report.to_dict(), indent=2, sort_keys=True) + "\n"
 
 
+def render_markdown_summary(report: ScanReport) -> str:
+    lines = [
+        "## ContextAudit Summary",
+        "",
+        "| Metric | Value |",
+        "| --- | --- |",
+        f"| Score | {report.score}/100 |",
+        f"| Issues | {len(report.issues)} |",
+        f"| Max severity | {_markdown_cell(report.max_severity)} |",
+        f"| Policy threshold | {_markdown_cell(report.policy.fail_on)} |",
+        f"| Exit code | {report.exit_code} |",
+    ]
+    if report.summary:
+        lines.extend(
+            [
+                "",
+                "### Issue Summary",
+                "",
+                "| Detector | Count |",
+                "| --- | --- |",
+            ]
+        )
+        for detector, count in report.summary.items():
+            lines.append(f"| {_markdown_cell(detector)} | {count} |")
+    if report.issues:
+        lines.extend(
+            [
+                "",
+                "### Findings",
+                "",
+                "| Severity | Detector | Chunk | Source | Fingerprint | Evidence |",
+                "| --- | --- | --- | --- | --- | --- |",
+            ]
+        )
+        for issue in report.issues:
+            lines.append(
+                "| "
+                f"{_markdown_cell(issue.severity)} | "
+                f"{_markdown_cell(issue.detector)} | "
+                f"{_markdown_code(issue.chunk_id)} | "
+                f"{_markdown_code(issue.source)} | "
+                f"{_markdown_code(issue.fingerprint)} | "
+                f"{_markdown_cell(issue.evidence)} |"
+            )
+    else:
+        lines.extend(["", "No issues met the configured detectors."])
+    return "\n".join(lines) + "\n"
+
+
 def render_sarif(report: ScanReport) -> str:
     payload = {
         "$schema": SARIF_SCHEMA_URL,
@@ -85,6 +134,15 @@ def render_text(report: ScanReport) -> str:
 def _detectors_in(report: ScanReport) -> list[str]:
     present = {issue.detector for issue in report.issues}
     return [detector for detector in DETECTORS if detector in present]
+
+
+def _markdown_cell(value: object) -> str:
+    text = str(value).replace("\r\n", "\n").replace("\r", "\n")
+    return text.replace("\\", "\\\\").replace("|", "\\|").replace("\n", "<br>")
+
+
+def _markdown_code(value: str) -> str:
+    return "`" + _markdown_cell(value).replace("`", "\\`") + "`"
 
 
 def _sarif_rule(detector: str) -> dict[str, object]:
