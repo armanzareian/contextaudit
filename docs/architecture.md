@@ -86,6 +86,14 @@ failures return exit code `1`. Clean scans, adapter demos, or evaluation runs re
 Input files are size-capped, JSONL parsing reports line numbers, Markdown parsing reports paths,
 and LlamaIndex parsing reports node indexes.
 
+## CI Examples
+
+The public CI examples are intentionally ordinary repository artifacts: a copyable reusable GitHub
+workflow and policy fixtures for pass, policy-fail, and malformed-input paths. The workflow keeps
+repository permissions read-only, disables checkout credential persistence, and appends Markdown
+scan output to the GitHub step summary when requested. The policy fixtures exercise the CLI exit
+code contract without requiring hosted services or network calls during local validation.
+
 ## Extension Points
 
 The current extension surface is the Python API:

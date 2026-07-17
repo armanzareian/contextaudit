@@ -49,5 +49,8 @@ jobs:
       - name: Run Markdown summary demo
         run: make summary-demo
 
+      - name: Run CI policy fixture demo
+        run: make ci-policy-demo
+
       - name: Run labeled evaluation
         run: make eval

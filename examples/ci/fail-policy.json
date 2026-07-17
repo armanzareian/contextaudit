@@ -1,0 +1,10 @@
+{
+  "fail_on": "high",
+  "max_chunk_chars": 180,
+  "disabled_detectors": [],
+  "severity_overrides": {
+    "oversize_chunk": "medium"
+  },
+  "allowlisted_sources": [],
+  "detector_patterns": {}
+}

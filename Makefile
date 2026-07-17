@@ -1,4 +1,4 @@
-.PHONY: test quality demo answer-demo adapter-demo sarif-demo summary-demo eval
+.PHONY: test quality demo answer-demo adapter-demo sarif-demo summary-demo ci-policy-demo eval
 
 PYTHON ?= python3
 
@@ -48,6 +48,36 @@ summary-demo:
 		--policy examples/support-pack/policy.json \
 		--format markdown \
 		--fail-on critical
+
+ci-policy-demo:
+	@PYTHONPATH=src $(PYTHON) -m contextaudit scan \
+		--context examples/support-pack/context.jsonl \
+		--policy examples/ci/pass-policy.json \
+		--format markdown \
+		> /tmp/contextaudit-pass-policy.md
+	@if PYTHONPATH=src $(PYTHON) -m contextaudit scan \
+		--context examples/support-pack/context.jsonl \
+		--policy examples/ci/fail-policy.json \
+		--format markdown \
+		> /tmp/contextaudit-fail-policy.md; then \
+		echo "expected fail-policy.json to fail"; \
+		exit 1; \
+	else \
+		code=$$?; \
+		test $$code -eq 1; \
+	fi
+	@if PYTHONPATH=src $(PYTHON) -m contextaudit scan \
+		--context examples/support-pack/context.jsonl \
+		--policy examples/ci/malformed-policy.json \
+		--format json \
+		> /tmp/contextaudit-malformed-policy.out \
+		2> /tmp/contextaudit-malformed-policy.err; then \
+		echo "expected malformed-policy.json to exit 2"; \
+		exit 1; \
+	else \
+		code=$$?; \
+		test $$code -eq 2; \
+	fi
 
 eval:
 	PYTHONPATH=src $(PYTHON) -m contextaudit eval \

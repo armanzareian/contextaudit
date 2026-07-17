@@ -250,6 +250,25 @@ steps:
         --fail-on critical >> "$GITHUB_STEP_SUMMARY"
 ```
 
+## CI Integration
+
+The `examples/github-actions/contextaudit-reusable.yml` workflow is a copyable reusable workflow
+for repository scans. It runs with read-only `contents` permission, checks out code with
+`persist-credentials: false`, installs ContextAudit, and writes Markdown output to the GitHub step
+summary by default.
+
+The `examples/ci` policies cover common CI outcomes:
+
+- `pass-policy.json`: report findings without failing unless a critical issue appears.
+- `fail-policy.json`: fail the job on high-severity findings.
+- `malformed-policy.json`: exercise policy validation and the CLI's exit code `2` path.
+
+Run the same cases locally:
+
+```bash
+make ci-policy-demo
+```
+
 ## Python API
 
 ```python
@@ -309,6 +328,7 @@ make answer-demo
 make adapter-demo
 make sarif-demo
 make summary-demo
+make ci-policy-demo
 make eval
 ```
 
