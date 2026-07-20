@@ -10,7 +10,8 @@ packs. It is designed around small, testable modules and deterministic output.
 3. `contextaudit.scanner` runs deterministic detectors and computes the triage score.
 4. `contextaudit.answer_audit` checks answer citations and lexical support against context chunks.
 5. `contextaudit.report` renders text, JSON, or SARIF output.
-6. `contextaudit.evaluation` runs labeled suites and reports precision, recall, and F1.
+6. `contextaudit.evaluation` runs labeled suites and reports aggregate plus detector-level
+   precision, recall, F1, fingerprint stability, and measured review guidance.
 7. `contextaudit.cli` wires the library into `scan`, `audit-answer`, and `eval` commands.
 
 The scanner keeps detector output as `Issue` objects until rendering. This makes the CLI and
@@ -103,6 +104,15 @@ The current extension surface is the Python API:
 - call `scan_context(chunks, policy)`,
 - call `audit_answer(chunks, answer_candidate, policy)`,
 - inspect `ScanReport.issues`, `summary`, and `exit_code`.
+
+Evaluation suites compare expected `(chunk_id, detector)` pairs with scanner output. The default
+synthetic benchmark includes clean and allowlisted control cases alongside detector-positive cases,
+and the evaluator reports aggregate counts plus a per-detector breakdown so detector changes can be
+reviewed without hiding one weak detector behind an aggregate score. Expected records can include
+stable issue fingerprints; the evaluator reports checked, matched, and mismatched fingerprint
+counts without changing scanner behavior. False-positive review notes are generated only for
+detectors that produced false positives in the labeled suite, keeping guidance tied to measured
+fixture behavior.
 
 Future extension work should keep detectors independent, deterministic, and unit-tested with
 labeled fixtures. New detectors should document known false positives and avoid external network

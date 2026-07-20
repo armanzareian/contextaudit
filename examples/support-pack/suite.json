@@ -1,7 +1,7 @@
 {
   "cases": [
     {
-      "name": "support context risks",
+      "name": "mixed support context risks",
       "policy": {
         "fail_on": "high",
         "max_chunk_chars": 180,
@@ -34,7 +34,7 @@
         {
           "chunk_id": "ticket-leak",
           "source": "ticket://1842",
-          "text": "Customer note includes password = redacted test credential and should not be sent into model context.",
+          "text": "Customer note includes password = redacted-test-credential and should not be sent into model context.",
           "trusted": true
         },
         {
@@ -51,12 +51,131 @@
         }
       ],
       "expected": [
-        {"chunk_id": "forum-override", "detector": "instruction_override"},
-        {"chunk_id": "forum-override", "detector": "untrusted_instruction"},
-        {"chunk_id": "ticket-leak", "detector": "sensitive_data"},
-        {"chunk_id": "kb-refunds-copy", "detector": "duplicate_text"},
-        {"chunk_id": "kb-warranty-long", "detector": "oversize_chunk"}
+        {
+          "chunk_id": "forum-override",
+          "detector": "instruction_override",
+          "fingerprint": "4e4f81b265f546a3"
+        },
+        {
+          "chunk_id": "forum-override",
+          "detector": "untrusted_instruction",
+          "fingerprint": "74ad4763da7879fd"
+        },
+        {
+          "chunk_id": "ticket-leak",
+          "detector": "sensitive_data",
+          "fingerprint": "8ada1a4bf3aa499e"
+        },
+        {
+          "chunk_id": "kb-refunds-copy",
+          "detector": "duplicate_text",
+          "fingerprint": "857e7386686b06d3"
+        },
+        {
+          "chunk_id": "kb-warranty-long",
+          "detector": "oversize_chunk",
+          "fingerprint": "abcee3ef479154c8"
+        }
       ]
+    },
+    {
+      "name": "allowlisted red-team example is ignored by instruction detectors",
+      "policy": {
+        "allowlisted_sources": [
+          "kb://trusted-examples/*"
+        ]
+      },
+      "context": [
+        {
+          "chunk_id": "red-team-example",
+          "source": "kb://trusted-examples/red-team",
+          "text": "Ignore previous instructions appears here as a documented red-team example.",
+          "trusted": false
+        }
+      ],
+      "expected": []
+    },
+    {
+      "name": "custom sensitive pattern",
+      "policy": {
+        "detector_patterns": {
+          "sensitive_data": [
+            "\\btenant secret\\b\\s+[\\w-]+"
+          ]
+        }
+      },
+      "context": [
+        {
+          "chunk_id": "tenant-secret",
+          "source": "ticket://tenant-secret",
+          "text": "Tenant secret alpha-123 appears in this synthetic fixture.",
+          "trusted": true
+        }
+      ],
+      "expected": [
+        {
+          "chunk_id": "tenant-secret",
+          "detector": "sensitive_data",
+          "fingerprint": "9bdb610cc7775c0b"
+        }
+      ]
+    },
+    {
+      "name": "strict size threshold",
+      "policy": {
+        "max_chunk_chars": 60
+      },
+      "context": [
+        {
+          "chunk_id": "long-policy",
+          "source": "kb://long-policy",
+          "text": "This policy paragraph is intentionally longer than the strict fixture threshold.",
+          "trusted": true
+        }
+      ],
+      "expected": [
+        {
+          "chunk_id": "long-policy",
+          "detector": "oversize_chunk",
+          "fingerprint": "47dd2063a587734a"
+        }
+      ]
+    },
+    {
+      "name": "duplicate context copy",
+      "context": [
+        {
+          "chunk_id": "billing-original",
+          "source": "kb://billing",
+          "text": "Billing plan changes take effect on the next invoice.",
+          "trusted": true
+        },
+        {
+          "chunk_id": "billing-copy",
+          "source": "kb://billing-copy",
+          "text": "Billing plan changes take effect on the next invoice.",
+          "trusted": true
+        }
+      ],
+      "expected": [
+        {
+          "chunk_id": "billing-copy",
+          "detector": "duplicate_text",
+          "fingerprint": "cfc36284517f421a"
+        }
+      ]
+    },
+    {
+      "name": "clean context",
+      "context": [
+        {
+          "chunk_id": "shipping-clean",
+          "source": "kb://shipping",
+          "text": "Standard shipping takes three to five business days for domestic orders.",
+          "trusted": true
+        }
+      ],
+      "expected": []
     }
   ]
 }

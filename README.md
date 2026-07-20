@@ -22,7 +22,7 @@ dependencies and makes no network requests.
   and LlamaIndex node JSON.
 - **SARIF output:** emit findings for CI systems and code-scanning tools that understand SARIF.
 - **Markdown summaries:** produce pull-request and build-step summaries for review workflows.
-- **Labeled evaluation:** measure detector behavior against JSON fixture suites.
+- **Labeled evaluation:** measure aggregate and detector-level behavior against JSON fixture suites.
 - **Small integration surface:** use the CLI, or call the typed Python API directly.
 
 ContextAudit is a heuristic auditor. It does not prove whether a model will follow or ignore a
@@ -56,6 +56,20 @@ Run the included labeled evaluation:
 ```bash
 contextaudit eval --suite examples/support-pack/suite.json
 ```
+
+The included suite is a deterministic synthetic benchmark for the context detectors. Evaluation
+compares expected `(chunk_id, detector)` pairs with scanner output and reports aggregate precision,
+recall, and F1 plus the same metrics broken down by detector. Expected records may also include an
+issue `fingerprint`; evaluation reports fingerprint match and mismatch counts so teams can catch
+accidental drift in suppression or review identifiers. JSON output includes `detectors`,
+`fingerprints`, and measured false-positive review fields for CI tools:
+
+```bash
+contextaudit eval --suite examples/support-pack/suite.json --format json
+```
+
+False-positive review guidance is emitted only from measured fixture outcomes. A detector with no
+false positives in the labeled suite does not receive generic advice in the evaluation output.
 
 Audit a generated answer against the same context pack:
 
