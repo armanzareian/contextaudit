@@ -1,4 +1,4 @@
-.PHONY: test quality demo answer-demo adapter-demo sarif-demo summary-demo ci-policy-demo eval
+.PHONY: test quality demo answer-demo adapter-demo extension-demo sarif-demo summary-demo ci-policy-demo eval
 
 PYTHON ?= python3
 
@@ -34,6 +34,9 @@ adapter-demo:
 		--context examples/adapters/llamaindex/nodes.json \
 		--context-format llamaindex-json \
 		--fail-on critical
+
+extension-demo:
+	PYTHONPATH=src $(PYTHON) examples/extensions/custom_loader.py
 
 sarif-demo:
 	@PYTHONPATH=src $(PYTHON) -m contextaudit scan \

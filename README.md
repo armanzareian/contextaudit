@@ -312,6 +312,40 @@ chunks = load_markdown_directory(Path("examples/adapters/markdown"))
 report = scan_context(chunks)
 ```
 
+Custom loaders can plug into the same typed workflow:
+
+```python
+from pathlib import Path
+
+from contextaudit import ContextChunk, Policy, scan_with_loader
+
+
+def load_pipe_context(path: Path) -> list[ContextChunk]:
+    chunks = []
+    for line in path.read_text().splitlines():
+        chunk_id, source, trusted, text = line.split("|", 3)
+        chunks.append(
+            ContextChunk(
+                chunk_id=chunk_id,
+                source=source,
+                trusted=trusted == "true",
+                text=text,
+            )
+        )
+    return chunks
+
+
+report = scan_with_loader(
+    load_pipe_context,
+    Path("examples/extensions/custom-context.pipe"),
+    Policy(fail_on="critical"),
+)
+```
+
+`load_with` validates that extension loaders return `ContextChunk` values, and `scan_with_loader`
+also accepts a custom scanner callable when an integration needs to wrap or replace the default
+scanner while preserving the `ScanReport` contract.
+
 ```python
 from contextaudit import AnswerCandidate, ContextChunk, audit_answer
 
@@ -340,6 +374,7 @@ make quality
 make demo
 make answer-demo
 make adapter-demo
+make extension-demo
 make sarif-demo
 make summary-demo
 make ci-policy-demo

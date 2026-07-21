@@ -97,13 +97,21 @@ code contract without requiring hosted services or network calls during local va
 
 ## Extension Points
 
-The current extension surface is the Python API:
+The extension surface is the Python API:
 
 - create `ContextChunk` values,
 - load common context exports through `load_context` or adapter-specific loader functions,
+- implement a `ContextLoader` callable and run it through `load_with` or `scan_with_loader`,
+- provide a custom `ContextScanner` callable for integrations that wrap or replace the default
+  scanner while returning a `ScanReport`,
 - call `scan_context(chunks, policy)`,
 - call `audit_answer(chunks, answer_candidate, policy)`,
 - inspect `ScanReport.issues`, `summary`, and `exit_code`.
+
+Extension loaders receive a `Path` and must return `ContextChunk` values. `load_with` checks that
+contract before scanning and reports extension-shape errors without copying returned chunk content
+into the exception message. The `examples/extensions/custom_loader.py` script demonstrates a small
+pipe-delimited loader that reuses the built-in scanner and policy model.
 
 Evaluation suites compare expected `(chunk_id, detector)` pairs with scanner output. The default
 synthetic benchmark includes clean and allowlisted control cases alongside detector-positive cases,
