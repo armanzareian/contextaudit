@@ -188,6 +188,8 @@ Detector controls are optional:
   chunks from instruction-like detectors. Sensitive-data and hygiene checks still run.
 - `detector_patterns` adds case-insensitive Python regex patterns to pattern-based detectors:
   `instruction_override`, `untrusted_instruction`, and `sensitive_data`.
+  Custom detector patterns are capped at 240 characters and reject backreferences and nested
+  repeated groups before scanning starts.
 
 CLI flags override policy-file values:
 

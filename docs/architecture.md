@@ -51,9 +51,11 @@ Policies are loaded once and normalized before scanning. The policy model contro
 - source allowlists for instruction-like detector checks,
 - detector-specific regex pattern packs.
 
-Policy validation rejects unknown detectors, invalid severities, and invalid regex patterns before
-the scanner runs. CLI flags can override the failure threshold and chunk-size limit while preserving
-the rest of the file policy.
+Policy validation rejects unknown detectors, invalid severities, invalid regex patterns, and unsafe
+custom regex shapes before the scanner runs. Custom detector patterns are capped at 240 characters
+and reject backreferences and nested repeated groups, which keeps policy-supplied pattern packs
+reviewable and avoids the most obvious catastrophic backtracking cases. CLI flags can override the
+failure threshold and chunk-size limit while preserving the rest of the file policy.
 
 ## Detectors
 
@@ -86,6 +88,19 @@ failures return exit code `1`. Clean scans, adapter demos, or evaluation runs re
 
 Input files are size-capped, JSONL parsing reports line numbers, Markdown parsing reports paths,
 and LlamaIndex parsing reports node indexes.
+
+## Threat Model
+
+ContextAudit assumes the local checkout and installed package are trusted. Context packs,
+retrieval-export files, answer candidates, and policy files are treated as untrusted input. The
+default runtime does not make network requests, call external models, execute context text, or
+evaluate policy files as code.
+
+The main residual risks are false positives or false negatives in deterministic detectors, policy
+files that intentionally weaken local thresholds, custom regexes that pass the conservative safety
+checks while still being expensive on unusual inputs, and reports that copy sensitive snippets into
+logs or CI artifacts. These tradeoffs keep the default path auditable and reproducible, but teams
+should review policies and report destinations when scanning private corpora.
 
 ## CI Examples
 

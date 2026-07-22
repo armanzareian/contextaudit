@@ -209,6 +209,28 @@ class IoTests(unittest.TestCase):
             with self.assertRaisesRegex(InputError, "invalid regex"):
                 load_policy(bad_pattern)
 
+    def test_load_policy_rejects_unsafe_detector_patterns(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            nested_repeat = Path(tmpdir) / "nested-repeat.json"
+            nested_repeat.write_text(
+                json.dumps({"detector_patterns": {"sensitive_data": [r"(a+)+secret"]}})
+            )
+            backreference = Path(tmpdir) / "backreference.json"
+            backreference.write_text(
+                json.dumps({"detector_patterns": {"sensitive_data": [r"(secret)\s+\1"]}})
+            )
+            too_long = Path(tmpdir) / "too-long.json"
+            too_long.write_text(
+                json.dumps({"detector_patterns": {"sensitive_data": ["a" * 241]}})
+            )
+
+            with self.assertRaisesRegex(InputError, "unsafe regex"):
+                load_policy(nested_repeat)
+            with self.assertRaisesRegex(InputError, "unsafe regex"):
+                load_policy(backreference)
+            with self.assertRaisesRegex(InputError, "too long"):
+                load_policy(too_long)
+
     def test_load_answer_reads_answer_and_citation_ids(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
             path = Path(tmpdir) / "answer.json"

@@ -20,6 +20,10 @@ DETECTORS = (
     "uncited_risky_context",
 )
 PATTERN_DETECTORS = ("instruction_override", "untrusted_instruction", "sensitive_data")
+MAX_DETECTOR_PATTERN_CHARS = 240
+BACKREFERENCE_PATTERN = re.compile(
+    r"\\[1-9][0-9]*|\\g<[^>]+>|\\k<[^>]+>|\(\?P=[^)]+\)"
+)
 
 
 def normalize_severity(value: str) -> str:
@@ -192,12 +196,115 @@ def _normalize_detector_patterns(values: Mapping[str, Sequence[str]]) -> dict[st
         _validate_detector(detector, allowed=PATTERN_DETECTORS)
         normalized_patterns = _normalize_string_tuple(patterns, "detector pattern")
         for pattern in normalized_patterns:
+            _validate_safe_detector_pattern(detector, pattern)
             try:
-                re.compile(pattern)
+                re.compile(pattern, re.I)
             except re.error as exc:
                 raise ValueError(f"invalid regex for {detector}: {exc}") from exc
         normalized[detector] = normalized_patterns
     return dict(sorted(normalized.items()))
+
+
+def _validate_safe_detector_pattern(detector: str, pattern: str) -> None:
+    if len(pattern) > MAX_DETECTOR_PATTERN_CHARS:
+        raise ValueError(
+            f"regex for {detector} is too long; max {MAX_DETECTOR_PATTERN_CHARS} characters"
+        )
+    if BACKREFERENCE_PATTERN.search(pattern):
+        raise ValueError(f"unsafe regex for {detector}: backreferences are not supported")
+    if _has_nested_repeat(pattern):
+        raise ValueError(
+            f"unsafe regex for {detector}: nested repeated groups are not supported"
+        )
+
+
+def _has_nested_repeat(pattern: str) -> bool:
+    group_repeat_stack: list[bool] = []
+    in_character_class = False
+    index = 0
+    while index < len(pattern):
+        char = pattern[index]
+        if char == "\\":
+            index += 2
+            continue
+        if in_character_class:
+            if char == "]":
+                in_character_class = False
+            index += 1
+            continue
+        if char == "[":
+            in_character_class = True
+            index += 1
+            continue
+        if char == "(":
+            group_repeat_stack.append(False)
+            index = _after_group_prefix(pattern, index)
+            continue
+        if char == ")":
+            if not group_repeat_stack:
+                index += 1
+                continue
+            group_contains_repeat = group_repeat_stack.pop()
+            group_is_repeated = _repeat_token_at(pattern, index + 1)
+            if group_contains_repeat and group_is_repeated:
+                return True
+            if group_repeat_stack and (group_contains_repeat or group_is_repeated):
+                group_repeat_stack[-1] = True
+            index += 1
+            continue
+        if _repeat_token_at(pattern, index):
+            if group_repeat_stack:
+                group_repeat_stack[-1] = True
+            if char == "{":
+                index = pattern.find("}", index) + 1
+                continue
+        index += 1
+    return False
+
+
+def _after_group_prefix(pattern: str, start: int) -> int:
+    prefix_start = start + 1
+    if prefix_start >= len(pattern) or pattern[prefix_start] != "?":
+        return start + 1
+    if pattern.startswith("?P<", prefix_start):
+        name_end = pattern.find(">", prefix_start + 3)
+        return name_end + 1 if name_end != -1 else start + 1
+    for prefix in ("?:", "?=", "?!", "?>", "?<=", "?<!"):
+        if pattern.startswith(prefix, prefix_start):
+            return prefix_start + len(prefix)
+    flag_end = _inline_flag_prefix_end(pattern, prefix_start + 1)
+    return flag_end if flag_end is not None else start + 1
+
+
+def _inline_flag_prefix_end(pattern: str, start: int) -> int | None:
+    index = start
+    while index < len(pattern) and pattern[index] in "aiLmsux-":
+        index += 1
+    if index > start and index < len(pattern) and pattern[index] == ":":
+        return index + 1
+    return None
+
+
+def _repeat_token_at(pattern: str, index: int) -> bool:
+    if index >= len(pattern):
+        return False
+    char = pattern[index]
+    if char in "*+?":
+        return True
+    return char == "{" and _is_braced_repeat(pattern, index)
+
+
+def _is_braced_repeat(pattern: str, index: int) -> bool:
+    end = pattern.find("}", index + 1)
+    if end == -1:
+        return False
+    body = pattern[index + 1 : end]
+    if not body:
+        return False
+    if "," in body:
+        left, right = body.split(",", 1)
+        return left.isdigit() and (right.isdigit() or right == "")
+    return body.isdigit()
 
 
 def _normalize_string_tuple(values: Sequence[str], label: str) -> tuple[str, ...]:
