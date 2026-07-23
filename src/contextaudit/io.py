@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import re
 from collections.abc import Iterable
 from pathlib import Path
 from typing import Any
@@ -10,6 +11,7 @@ from contextaudit.models import ContextChunk, Policy
 
 MAX_INPUT_BYTES = 10 * 1024 * 1024
 CONTEXT_FORMATS = ("jsonl", "markdown", "langchain-jsonl", "llamaindex-json")
+SUPPRESSION_FINGERPRINT_PATTERN = re.compile(r"^[0-9a-f]{16}$")
 
 
 class InputError(ValueError):
@@ -246,6 +248,31 @@ def load_policy(path: Path | None) -> Policy:
     if path is None:
         return Policy()
     return policy_from_mapping(_object_from(_read_json(path), str(path)))
+
+
+def load_suppressions(path: Path | None) -> frozenset[str]:
+    if path is None:
+        return frozenset()
+    record = _object_from(_read_json(path), str(path))
+    value = record.get("suppressions", [])
+    if not isinstance(value, list):
+        raise InputError(f"{path}: suppressions must be an array")
+
+    fingerprints: list[str] = []
+    for index, entry in enumerate(value):
+        label = f"{path}:suppressions[{index}]"
+        if not isinstance(entry, dict):
+            raise InputError(f"{label}: suppression must be an object")
+        fingerprint = entry.get("fingerprint")
+        if not isinstance(fingerprint, str) or not fingerprint:
+            raise InputError(f"{label}: fingerprint must be a non-empty string")
+        if not SUPPRESSION_FINGERPRINT_PATTERN.fullmatch(fingerprint):
+            raise InputError(f"{label}: fingerprint must be a 16-character lowercase hex string")
+        reason = entry.get("reason")
+        if reason is not None and (not isinstance(reason, str) or not reason.strip()):
+            raise InputError(f"{label}: reason must be a non-empty string when present")
+        fingerprints.append(fingerprint)
+    return frozenset(fingerprints)
 
 
 def load_answer(path: Path) -> AnswerCandidate:

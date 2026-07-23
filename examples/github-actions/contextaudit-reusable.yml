@@ -17,6 +17,11 @@ on:
         required: false
         default: ""
         type: string
+      suppressions_path:
+        description: Optional suppression file path in the caller repository.
+        required: false
+        default: ""
+        type: string
       fail_on:
         description: Lowest severity that should fail the job.
         required: false
@@ -52,34 +57,21 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          args=(
+            scan
+            --context "${{ inputs.context_path }}"
+            --context-format "${{ inputs.context_format }}"
+            --format "${{ inputs.output_format }}"
+            --fail-on "${{ inputs.fail_on }}"
+          )
+          if [[ -n "${{ inputs.policy_path }}" ]]; then
+            args+=(--policy "${{ inputs.policy_path }}")
+          fi
+          if [[ -n "${{ inputs.suppressions_path }}" ]]; then
+            args+=(--suppressions "${{ inputs.suppressions_path }}")
+          fi
           if [[ "${{ inputs.output_format }}" == "markdown" ]]; then
-            if [[ -n "${{ inputs.policy_path }}" ]]; then
-              contextaudit scan \
-                --context "${{ inputs.context_path }}" \
-                --context-format "${{ inputs.context_format }}" \
-                --policy "${{ inputs.policy_path }}" \
-                --format "${{ inputs.output_format }}" \
-                --fail-on "${{ inputs.fail_on }}" >> "$GITHUB_STEP_SUMMARY"
-            else
-              contextaudit scan \
-                --context "${{ inputs.context_path }}" \
-                --context-format "${{ inputs.context_format }}" \
-                --format "${{ inputs.output_format }}" \
-                --fail-on "${{ inputs.fail_on }}" >> "$GITHUB_STEP_SUMMARY"
-            fi
+            contextaudit "${args[@]}" >> "$GITHUB_STEP_SUMMARY"
           else
-            if [[ -n "${{ inputs.policy_path }}" ]]; then
-              contextaudit scan \
-                --context "${{ inputs.context_path }}" \
-                --context-format "${{ inputs.context_format }}" \
-                --policy "${{ inputs.policy_path }}" \
-                --format "${{ inputs.output_format }}" \
-                --fail-on "${{ inputs.fail_on }}"
-            else
-              contextaudit scan \
-                --context "${{ inputs.context_path }}" \
-                --context-format "${{ inputs.context_format }}" \
-                --format "${{ inputs.output_format }}" \
-                --fail-on "${{ inputs.fail_on }}"
-            fi
+            contextaudit "${args[@]}"
           fi

@@ -13,9 +13,11 @@ from contextaudit.io import (
     load_langchain_jsonl,
     load_llamaindex_json,
     load_markdown_directory,
+    load_suppressions,
 )
 from contextaudit.models import ContextChunk, Issue, Policy, ScanReport
 from contextaudit.scanner import scan_context
+from contextaudit.suppressions import apply_suppressions
 
 __all__ = [
     "AnswerCandidate",
@@ -27,10 +29,12 @@ __all__ = [
     "Policy",
     "ScanReport",
     "audit_answer",
+    "apply_suppressions",
     "load_context",
     "load_langchain_jsonl",
     "load_llamaindex_json",
     "load_markdown_directory",
+    "load_suppressions",
     "load_with",
     "scan_context",
     "scan_with_loader",

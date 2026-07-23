@@ -8,10 +8,18 @@ from pathlib import Path
 from contextaudit import __version__
 from contextaudit.answer_audit import audit_answer
 from contextaudit.evaluation import evaluate_suite, render_evaluation_json, render_evaluation_text
-from contextaudit.io import CONTEXT_FORMATS, InputError, load_answer, load_context, load_policy
+from contextaudit.io import (
+    CONTEXT_FORMATS,
+    InputError,
+    load_answer,
+    load_context,
+    load_policy,
+    load_suppressions,
+)
 from contextaudit.models import Policy, ScanReport, normalize_severity
 from contextaudit.report import render_json, render_markdown_summary, render_sarif, render_text
 from contextaudit.scanner import scan_context
+from contextaudit.suppressions import apply_suppressions
 
 
 def main(argv: Sequence[str] | None = None) -> int:
@@ -48,6 +56,7 @@ def _build_parser() -> argparse.ArgumentParser:
         help="context input format",
     )
     scan.add_argument("--policy", type=Path, help="optional JSON policy file")
+    scan.add_argument("--suppressions", type=Path, help="optional JSON suppression file")
     scan.add_argument("--format", choices=("text", "json", "sarif", "markdown"), default="text")
     scan.add_argument("--fail-on", choices=("low", "medium", "high", "critical"))
     scan.add_argument("--max-chunk-chars", type=int)
@@ -65,6 +74,7 @@ def _build_parser() -> argparse.ArgumentParser:
     )
     answer.add_argument("--answer", type=Path, required=True, help="JSON answer candidate")
     answer.add_argument("--policy", type=Path, help="optional JSON policy file")
+    answer.add_argument("--suppressions", type=Path, help="optional JSON suppression file")
     answer.add_argument("--format", choices=("text", "json", "sarif", "markdown"), default="text")
     answer.add_argument("--fail-on", choices=("low", "medium", "high", "critical"))
     answer.add_argument("--max-chunk-chars", type=int)
@@ -78,6 +88,7 @@ def _build_parser() -> argparse.ArgumentParser:
 def _run_scan(args: argparse.Namespace) -> int:
     policy = _policy_from_args(args)
     report = scan_context(load_context(args.context, args.context_format), policy)
+    report = apply_suppressions(report, load_suppressions(args.suppressions))
     print(_render_report(report, args.format), end="")
     return report.exit_code
 
@@ -89,6 +100,7 @@ def _run_audit_answer(args: argparse.Namespace) -> int:
         load_answer(args.answer),
         policy,
     )
+    report = apply_suppressions(report, load_suppressions(args.suppressions))
     print(_render_report(report, args.format), end="")
     return report.exit_code
 

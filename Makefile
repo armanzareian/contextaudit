@@ -1,4 +1,4 @@
-.PHONY: test quality demo answer-demo adapter-demo extension-demo sarif-demo summary-demo ci-policy-demo eval
+.PHONY: test quality demo answer-demo adapter-demo extension-demo sarif-demo summary-demo ci-policy-demo suppression-demo eval
 
 PYTHON ?= python3
 
@@ -81,6 +81,14 @@ ci-policy-demo:
 		code=$$?; \
 		test $$code -eq 2; \
 	fi
+
+suppression-demo:
+	@PYTHONPATH=src $(PYTHON) -m contextaudit scan \
+		--context examples/support-pack/context.jsonl \
+		--policy examples/ci/fail-policy.json \
+		--suppressions examples/ci/suppressions.json \
+		--format markdown \
+		> /tmp/contextaudit-suppressed.md
 
 eval:
 	PYTHONPATH=src $(PYTHON) -m contextaudit eval \

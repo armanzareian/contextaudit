@@ -38,6 +38,7 @@ def render_markdown_summary(report: ScanReport) -> str:
         "| --- | --- |",
         f"| Score | {report.score}/100 |",
         f"| Issues | {len(report.issues)} |",
+        f"| Suppressed | {report.suppressed_issue_count} |",
         f"| Max severity | {_markdown_cell(report.max_severity)} |",
         f"| Policy threshold | {_markdown_cell(report.policy.fail_on)} |",
         f"| Exit code | {report.exit_code} |",
@@ -97,6 +98,7 @@ def render_sarif(report: ScanReport) -> str:
                 "properties": {
                     "score": report.score,
                     "issue_count": len(report.issues),
+                    "suppressed_issue_count": report.suppressed_issue_count,
                     "max_severity": report.max_severity,
                     "policy": report.policy.to_dict(),
                 },
@@ -111,6 +113,7 @@ def render_text(report: ScanReport) -> str:
         "ContextAudit report",
         f"Score: {report.score}/100",
         f"Issues: {len(report.issues)}",
+        f"Suppressed: {report.suppressed_issue_count}",
         f"Max severity: {report.max_severity}",
         f"Policy: fail on {report.policy.fail_on}; max chunk chars {report.policy.max_chunk_chars}",
     ]

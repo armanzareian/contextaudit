@@ -48,6 +48,6 @@ allows it.
 Known limits:
 
 - Pattern-based sensitive-data checks can miss secrets or flag benign text.
-- Prompt-injection findings identify risky text patterns, not guaranteed model behavior.
+- Instruction-injection findings identify risky text patterns, not guaranteed model behavior.
 - User-provided policy files are parsed as JSON only and are not executed.
 - Custom detector regex validation is intentionally heuristic; keep patterns small and reviewable.

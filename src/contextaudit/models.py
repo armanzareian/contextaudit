@@ -138,6 +138,11 @@ class ScanReport:
     issues: list[Issue]
     summary: dict[str, int]
     policy: Policy
+    suppressed_issue_count: int = 0
+
+    def __post_init__(self) -> None:
+        if self.suppressed_issue_count < 0:
+            raise ValueError("suppressed_issue_count must be non-negative")
 
     @property
     def max_severity(self) -> str:
@@ -157,6 +162,7 @@ class ScanReport:
         return {
             "score": self.score,
             "issue_count": len(self.issues),
+            "suppressed_issue_count": self.suppressed_issue_count,
             "max_severity": self.max_severity,
             "summary": self.summary,
             "policy": self.policy.to_dict(),

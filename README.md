@@ -17,6 +17,7 @@ dependencies and makes no network requests.
 - **Pre-model context gate:** inspect the exact context pack that would be sent to an LLM.
 - **Deterministic checks:** produce reproducible reports suitable for local development and CI.
 - **Policy thresholds:** fail on a selected severity while still reporting lower-severity issues.
+- **Fingerprint suppressions:** accept specific known findings without weakening detector policy.
 - **Answer citation audit:** check supplied answers for missing citations and weak lexical support.
 - **Corpus adapters:** load JSONL context packs, Markdown directories, LangChain document JSONL,
   and LlamaIndex node JSON.
@@ -71,7 +72,7 @@ contextaudit eval --suite examples/support-pack/suite.json --format json
 False-positive review guidance is emitted only from measured fixture outcomes. A detector with no
 false positives in the labeled suite does not receive generic advice in the evaluation output.
 
-Audit a generated answer against the same context pack:
+Audit an answer candidate against the same context pack:
 
 ```bash
 contextaudit audit-answer \
@@ -155,7 +156,7 @@ The answer audit reports:
 - `uncited_risky_context`: answer text overlaps with high-risk context that was not cited.
 
 The support check is a lexical heuristic. It can miss paraphrases, numbers expressed in different
-formats, and claims whose support spans multiple documents. Treat findings as review prompts, not
+formats, and claims whose support spans multiple documents. Treat findings as review cues, not
 semantic proof that an answer is correct or incorrect.
 
 ## Policy
@@ -202,6 +203,32 @@ contextaudit scan \
   --format json
 ```
 
+Suppressions are a separate JSON file keyed by issue fingerprint. Use them for reviewed findings
+that should remain visible in audit history without failing a strict local or CI check:
+
+```json
+{
+  "suppressions": [
+    {
+      "fingerprint": "4e4f81b265f546a3",
+      "reason": "accepted synthetic forum instruction fixture"
+    }
+  ]
+}
+```
+
+```bash
+contextaudit scan \
+  --context examples/support-pack/context.jsonl \
+  --policy examples/ci/fail-policy.json \
+  --suppressions examples/ci/suppressions.json \
+  --format markdown
+```
+
+Suppression files do not disable detectors. ContextAudit scans first, then removes only findings
+whose 16-character lowercase hex fingerprints are listed in the file. The report keeps a
+`suppressed_issue_count` so CI summaries can show that findings were accepted intentionally.
+
 ## Output
 
 Text output is compact for terminal review:
@@ -213,11 +240,11 @@ Issues: 5
 Max severity: high
 ```
 
-JSON output includes `score`, `issue_count`, `max_severity`, `summary`, `policy`, `exit_code`,
-and a machine-readable `issues` array. Each issue includes a deterministic `fingerprint` derived
-from its detector, chunk ID, source, and evidence so suppressions can remain stable across severity
-changes. The score is a simple deterministic penalty score for triage, not a model-safety
-guarantee.
+JSON output includes `score`, `issue_count`, `suppressed_issue_count`, `max_severity`, `summary`,
+`policy`, `exit_code`, and a machine-readable `issues` array. Each issue includes a deterministic
+`fingerprint` derived from its detector, chunk ID, source, and evidence so suppressions can remain
+stable across severity changes. The score is a simple deterministic penalty score for triage, not a
+model-safety guarantee.
 
 SARIF output is available for `scan` and `audit-answer`:
 
@@ -271,18 +298,21 @@ steps:
 The `examples/github-actions/contextaudit-reusable.yml` workflow is a copyable reusable workflow
 for repository scans. It runs with read-only `contents` permission, checks out code with
 `persist-credentials: false`, installs ContextAudit, and writes Markdown output to the GitHub step
-summary by default.
+summary by default. Callers can pass `policy_path`, `suppressions_path`, `fail_on`,
+`context_format`, and `output_format` inputs.
 
 The `examples/ci` policies cover common CI outcomes:
 
 - `pass-policy.json`: report findings without failing unless a critical issue appears.
 - `fail-policy.json`: fail the job on high-severity findings.
 - `malformed-policy.json`: exercise policy validation and the CLI's exit code `2` path.
+- `suppressions.json`: accept reviewed fixture fingerprints while keeping strict policy.
 
 Run the same cases locally:
 
 ```bash
 make ci-policy-demo
+make suppression-demo
 ```
 
 ## Python API
@@ -380,6 +410,7 @@ make extension-demo
 make sarif-demo
 make summary-demo
 make ci-policy-demo
+make suppression-demo
 make eval
 ```
 

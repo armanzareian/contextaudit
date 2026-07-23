@@ -9,10 +9,11 @@ packs. It is designed around small, testable modules and deterministic output.
 2. `contextaudit.models` represents chunks, policies, issues, and scan reports.
 3. `contextaudit.scanner` runs deterministic detectors and computes the triage score.
 4. `contextaudit.answer_audit` checks answer citations and lexical support against context chunks.
-5. `contextaudit.report` renders text, JSON, or SARIF output.
-6. `contextaudit.evaluation` runs labeled suites and reports aggregate plus detector-level
+5. `contextaudit.suppressions` removes reviewed findings by stable fingerprint after scanning.
+6. `contextaudit.report` renders text, JSON, or SARIF output.
+7. `contextaudit.evaluation` runs labeled suites and reports aggregate plus detector-level
    precision, recall, F1, fingerprint stability, and measured review guidance.
-7. `contextaudit.cli` wires the library into `scan`, `audit-answer`, and `eval` commands.
+8. `contextaudit.cli` wires the library into `scan`, `audit-answer`, and `eval` commands.
 
 The scanner keeps detector output as `Issue` objects until rendering. This makes the CLI and
 Python API share the same behavior and keeps report formatting separate from detection logic.
@@ -22,7 +23,8 @@ Python API share the same behavior and keeps report formatting separate from det
 All report formats are derived from the same `ScanReport`. Text output is optimized for terminal
 review, JSON output preserves the full machine-readable issue contract, Markdown summary output is
 shaped for pull-request comments and build-step summaries, and SARIF output is shaped for CI
-systems that ingest static-analysis results. Markdown summaries include the score, issue count,
+systems that ingest static-analysis results. Each format includes a suppressed issue count when a
+suppression file accepts reviewed fingerprints. Markdown summaries include the score, issue count,
 policy threshold, detector counts, and a compact finding table with escaped evidence snippets.
 SARIF rules correspond to detector IDs. SARIF results preserve the issue source as the artifact
 URI, the chunk ID as a logical location, the evidence snippet as the region snippet, and the stable
@@ -77,6 +79,12 @@ Each issue receives a deterministic fingerprint based on the detector, chunk ID,
 evidence. Severity overrides intentionally do not affect fingerprints, which makes review and
 suppression workflows stable when a team changes how strongly a detector should fail builds.
 
+Suppression files are loaded as untrusted JSON and validated before filtering. Each suppression
+entry must contain a 16-character lowercase hex fingerprint and may include a non-empty reason for
+review history. Suppressions are applied after `scan` or `audit-answer` constructs a `ScanReport`;
+they remove exact fingerprint matches, recompute the score, summary, maximum severity, and exit
+code, and preserve only the count of suppressed findings in public reports.
+
 Answer citation checks are deterministic lexical heuristics. They do not call models, fetch remote
 documents, or prove semantic entailment. They are meant to find obvious citation gaps and claims
 that deserve human review.
@@ -105,10 +113,10 @@ should review policies and report destinations when scanning private corpora.
 ## CI Examples
 
 The public CI examples are intentionally ordinary repository artifacts: a copyable reusable GitHub
-workflow and policy fixtures for pass, policy-fail, and malformed-input paths. The workflow keeps
-repository permissions read-only, disables checkout credential persistence, and appends Markdown
-scan output to the GitHub step summary when requested. The policy fixtures exercise the CLI exit
-code contract without requiring hosted services or network calls during local validation.
+workflow and fixtures for pass, policy-fail, malformed-input, and reviewed-suppression paths. The
+workflow keeps repository permissions read-only, disables checkout credential persistence, and
+appends Markdown scan output to the GitHub step summary when requested. The fixtures exercise the
+CLI exit code contract without requiring hosted services or network calls during local validation.
 
 ## Extension Points
 
@@ -133,7 +141,7 @@ synthetic benchmark includes clean and allowlisted control cases alongside detec
 and the evaluator reports aggregate counts plus a per-detector breakdown so detector changes can be
 reviewed without hiding one weak detector behind an aggregate score. Expected records can include
 stable issue fingerprints; the evaluator reports checked, matched, and mismatched fingerprint
-counts without changing scanner behavior. False-positive review notes are generated only for
+counts without changing scanner behavior. False-positive review notes are emitted only for
 detectors that produced false positives in the labeled suite, keeping guidance tied to measured
 fixture behavior.
 

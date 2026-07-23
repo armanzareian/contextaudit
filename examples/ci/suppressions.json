@@ -1,0 +1,16 @@
+{
+  "suppressions": [
+    {
+      "fingerprint": "4e4f81b265f546a3",
+      "reason": "accepted synthetic forum instruction fixture"
+    },
+    {
+      "fingerprint": "74ad4763da7879fd",
+      "reason": "accepted synthetic untrusted-source fixture"
+    },
+    {
+      "fingerprint": "59a9299e194e6ac4",
+      "reason": "accepted synthetic credential fixture"
+    }
+  ]
+}

@@ -231,6 +231,39 @@ class IoTests(unittest.TestCase):
             with self.assertRaisesRegex(InputError, "too long"):
                 load_policy(too_long)
 
+    def test_load_suppressions_reads_valid_fingerprints(self) -> None:
+        loader = getattr(io, "load_suppressions", None)
+        self.assertIsNotNone(loader, "load_suppressions should be available")
+        with tempfile.TemporaryDirectory() as tmpdir:
+            path = Path(tmpdir) / "suppressions.json"
+            path.write_text(
+                json.dumps(
+                    {
+                        "suppressions": [
+                            {
+                                "fingerprint": "0123456789abcdef",
+                                "reason": "accepted synthetic fixture finding",
+                            },
+                            {"fingerprint": "fedcba9876543210"},
+                        ]
+                    }
+                )
+            )
+
+            fingerprints = loader(path)
+
+        self.assertEqual(fingerprints, frozenset({"0123456789abcdef", "fedcba9876543210"}))
+
+    def test_load_suppressions_rejects_malformed_fingerprints(self) -> None:
+        loader = getattr(io, "load_suppressions", None)
+        self.assertIsNotNone(loader, "load_suppressions should be available")
+        with tempfile.TemporaryDirectory() as tmpdir:
+            path = Path(tmpdir) / "bad-suppressions.json"
+            path.write_text(json.dumps({"suppressions": [{"fingerprint": "not-hex"}]}))
+
+            with self.assertRaisesRegex(InputError, "fingerprint"):
+                loader(path)
+
     def test_load_answer_reads_answer_and_citation_ids(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
             path = Path(tmpdir) / "answer.json"
